@@ -16,7 +16,7 @@ def register_commands(bot):
 
     for activity in ACTIVITIES:
         @group.command(name=activity.COMMAND, description=activity.DESCRIPTION)
-        async def activity(ctx):
-            await WordScramble(bot, ctx).play()
+        async def command(ctx):
+            return await activity(bot, ctx).play()
     
     bot.add_application_command(group)
