@@ -4,14 +4,10 @@ import openai
 import re
 
 from discord.ext import commands
+from discord.channel import TextChannel
 
-from . import activities
-
-OPENAI_SECRET_KEY = os.environ.get("OPENAI_SECRET_KEY", "")
-CHAT_TEMPERATURE = float(os.environ.get("CHAT_TEMPERATURE", 0))
-CHAT_MAX_TOKENS = int(os.environ.get("CHAT_MAX_TOKENS", 50))
-
-openai.api_key = OPENAI_SECRET_KEY
+from gptcord import activities, gpt_client
+from gptcord.views import InviteView, ImageView, InviteQueryView
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -30,13 +26,46 @@ async def on_message(message):
 
     if bot.user in message.mentions:
         prompt = re.sub(r'<@(.*?)>', "", message.content).strip()
-        reply = get_reply(prompt).strip()
+        reply = gpt_client.completion(prompt).strip()
 
         await message.reply(reply)
 
-def get_reply(message):
-    replies = openai.Completion.create(model="text-davinci-003", prompt=message, temperature=CHAT_TEMPERATURE, max_tokens=CHAT_MAX_TOKENS)
-    reply = replies["choices"][0]["text"]
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if after is None:
+        return
 
-    return reply
-        
+    channel_to_alert = after.channel
+
+    if len(channel_to_alert.members) != 1:
+        return
+    
+    await channel_to_alert.send(content="Would you like to invite anyone?", delete_after=(60), view=InviteQueryView(), silent=True)
+
+@bot.slash_command(name="invite")
+async def invite(ctx, game_name):
+    embed = discord.Embed(
+        title=f"{ game_name }",
+        description=f"@here",
+        color=discord.Color.red()
+    )
+    embed.set_author(
+        name=ctx.author.display_name,
+        icon_url=ctx.author.display_avatar
+    )
+
+    await ctx.respond(embed=embed, view=InviteView())
+
+@bot.slash_command(name="image")
+async def image(ctx, prompt):
+    if hasattr(ctx, "defer"):
+        await ctx.defer()
+    
+    image_url, cost = gpt_client.image(prompt)
+    embed = discord.Embed()
+    embed.set_image(url=image_url)
+
+    if hasattr(ctx, "respond"):
+        await ctx.respond(f"That cost **${cost}**. Was it worth it?", embed=embed, view=ImageView())
+    else:
+        await ctx.followup.send(f"That cost **${cost}**. Was it worth it?", embed=embed, view=ImageView())

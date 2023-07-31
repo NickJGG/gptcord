@@ -2,13 +2,12 @@ WORDS = ["ability","because","call","down","each","fact","get","having","it","ju
 
 class Meta(type):
     def __str__(self):
-        print(self.NAME, self.COMMAND, self.DESCRIPTION)
-
         return f"**{ self.NAME }** `{ self.COMMAND }` - { self.DESCRIPTION }"
 
 class Activity(metaclass=Meta):
-    def __init__(self, bot, message):
+    def __init__(self, bot, message, group=None):
         self.bot = bot
+        self.group = group
         self.message = message
 
     async def play(self):
