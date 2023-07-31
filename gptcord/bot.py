@@ -32,7 +32,8 @@ async def on_message(message):
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    if after is None:
+    # We only want to catch when a user initially joins
+    if before.channel is not None or after.channel is None:
         return
 
     channel_to_alert = after.channel
